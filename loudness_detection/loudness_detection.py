@@ -70,6 +70,7 @@ def callback(in_data, frame_count, time_info, status):
             print("s", flush=True)
             start = False
             end = False
+            data = np.zeros(22050, dtype='int16')
 
         return (in_data, pyaudio.paContinue)
     else:
@@ -90,37 +91,29 @@ active = False
 
 try:
     while 1:
+        data = q.get()
+        data = filter.output_freq(data)
+        wavfile.write("filtered.wav", fs, data)
+        data = data * 32767
+        data = data.astype(np.int16)
+        # fs, data = wavfile.read("filtered.wav")
+        # print(data.shape, flush=True)
+        print("d", flush=True)
+        audio = sr.AudioData(data.tobytes(), fs, 2)
+        command = ""
+        try:
+            command = r.recognize_google(audio, key=None, language="en-US", show_all=False)
+            print("command: " + command, flush=True)
+        except sr.UnknownValueError:
+            print("command: void", flush=True)
+
         if not active:
-            data = q.get()
-            data = filter.output_freq(data)
-            # wavfile.write("filtered.wav", fs, data)
-            data = data * 32767
-            data = data.astype(np.int16)
-            # fs, data = wavfile.read("filtered.wav")
-            # print(data.shape, flush=True)
-            print("d", flush=True)
-            audio = sr.AudioData(data.tobytes(), fs, 2)
-            command = ""
-            try:
-                command = r.recognize_google(audio, key=None, language="en-US", show_all=False)
-                print("command: " + command, flush=True)
-            except sr.UnknownValueError:
-                print("command: void", flush=True)
-            if command == "active" or command == "activation":
+            if command == "active" or command == "activation" or command == "excavation" or command == "activate":
                 say("Hi, Yunfei")
                 active = True
-                stream.stop_stream()
         else:
-            with sr.Microphone() as source:
-                print("Please input command:")
-                audio = r.listen(source)
-            # recognize speech using google
-            try:
-                print("command is: " + r.recognize_google(audio, key=None, language="en-US", show_all=False))
-            except sr.UnknownValueError:
-                print("google could not understand audio")
-            active = False
-            stream.start_stream()
+            print("command accept")
+
 
 
 
