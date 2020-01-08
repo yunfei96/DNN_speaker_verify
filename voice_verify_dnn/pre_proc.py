@@ -4,13 +4,14 @@ from scipy.fftpack import fft, fftfreq, ifft
 import numpy as np
 import os
 import re
+from pydub import AudioSegment
 low = 85*3
 high = 7000*3
 
 # This function can plot the sound into frequency domain and store the filtered data
 def plt_freq(file):
     samplerate, data = wavfile.read(file)
-    data = data[:5 * samplerate]  # use the first 3 second data
+    data = data[:3 * samplerate]  # use the first 3 second data
     samples = data.shape[0]
 
     # normalize the data
@@ -38,23 +39,23 @@ def plt_freq(file):
     plt.show()
     return fftabs[:int(freqs.size / 2)]
 
-# This function can extract the data bounded by high and low frequency
-def get_freq(file):
-    samplerate, data = wavfile.read(file)
-    data = data[:5 * samplerate]  # use the first 3 second data
-    samples = data.shape[0]
+# Calculate and plot spectrogram for a wav audio file
+def graph_spectrogram(wav_file):
+    rate, data = wavfile.read(wav_file)
+    data = data[:3 * rate]
+    nfft = 200 # Length of each window segment
+    fs = rate # Sampling frequencies
+    noverlap = 150 # Overlap between windows
+    nchannels = data.ndim
+    if nchannels == 1:
+        pxx, freqs, bins, im = plt.specgram(data, nfft, fs, noverlap = noverlap)
+        #plt.show()
+    elif nchannels == 2:
+        pxx, freqs, bins, im = plt.specgram(data[:,0], nfft, fs, noverlap = noverlap)
+        #plt.show()
+    return pxx.T
 
-    # normalize the data
-    m = max(data)
-    data = [(ele / m) for ele in data]
 
-    datafft = fft(data)
-    # get the absolute value of real and complex component:
-    fftabs = abs(datafft)
-
-    return fftabs[low:high]
-
-# This function build the train data
 def build_train_data():
     subjects = os.listdir('./data')
     subjects.sort()
@@ -74,7 +75,7 @@ def build_train_data():
                         if k != '.DS_Store':
                             #set the data and label
                             name = './data/' + i + '/' +j+'/'+k
-                            data.append(get_freq(name))
+                            data.append(graph_spectrogram(name))
                             label.append(c)
                             print(c)
                             print(i+j+k)
@@ -93,16 +94,16 @@ def build_test_data():
     for i in subjects:
         #-----------------------for different speech----------------
         if i != '.DS_Store':
-            speech = os.listdir('./data/' + i)
+            speech = os.listdir('./data_t/' + i)
             for j in speech:
                 # -----------------------for different section------------------
                 if j != '.DS_Store':
-                    section = os.listdir('./data/' + i + '/' +j)
+                    section = os.listdir('./data_t/' + i + '/' +j)
                     for k in section:
                         if k != '.DS_Store':
                             #set the data and label
-                            name = './data/' + i + '/' +j+'/'+k
-                            data.append(get_freq(name))
+                            name = './data_t/' + i + '/' +j+'/'+k
+                            data.append(graph_spectrogram(name))
                             label.append(c)
                             print(c)
                             print(i+j+k)
@@ -110,7 +111,9 @@ def build_test_data():
         c = c+1
     return data,label
 
-# uncomment to test these functions
 
+
+# uncomment to test these functions
 #(data, label) = build_train_data()
-plt_freq('00002.wav')
+#x = graph_spectrogram('00008.wav')
+#print(x)
