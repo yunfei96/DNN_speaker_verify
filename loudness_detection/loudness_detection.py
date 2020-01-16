@@ -18,7 +18,7 @@ import speech_recognition as sr
 import wave
 import filter
 import subprocess
-
+from tuning import release_list, stop_list, grasp_list,active_list
 
 def say(text):
     subprocess.call(['say', text])
@@ -47,7 +47,7 @@ def get_audio_input_stream(callback):
 
 # Queue to communicate between the audio callback and main thread
 # ---------------------- detection threshold --------------------------------------
-silence_threshold = 20000
+silence_threshold = 10000
 q = Queue()
 start = False
 end = False
@@ -59,18 +59,19 @@ def callback(in_data, frame_count, time_info, status):
     global data, silence_threshold, start, end
     data0 = np.frombuffer(in_data, dtype='int16')
     loudness = filter.get_freq(data0)
-    print(np.abs(loudness).mean())
+    #print(np.abs(loudness).mean())
     # smaller than threshold, ignore
     if np.abs(loudness).mean() < silence_threshold:
         # print('-', end = '', flush=True)
         if not start and not end:
             start = True
+            data = np.zeros(22050, dtype='int16')
         elif start and end:
             q.put(data)
-            print("s", flush=True)
+            #print("s", flush=True)
             start = False
             end = False
-            data = np.zeros(22050, dtype='int16')
+            #data = np.zeros(22050, dtype='int16')
 
         return (in_data, pyaudio.paContinue)
     else:
@@ -93,26 +94,37 @@ try:
     while 1:
         data = q.get()
         data = filter.output_freq(data)
-        wavfile.write("filtered.wav", fs, data)
+        #wavfile.write("filtered.wav", fs, data)
         data = data * 32767
         data = data.astype(np.int16)
-        # fs, data = wavfile.read("filtered.wav")
+        #fs, data = wavfile.read("filtered.wav")
         # print(data.shape, flush=True)
-        print("d", flush=True)
+        #print("d", flush=True)
         audio = sr.AudioData(data.tobytes(), fs, 2)
         command = ""
         try:
             command = r.recognize_google(audio, key=None, language="en-US", show_all=False)
-            print("command: " + command, flush=True)
+            #print("command: " + command, flush=True)
         except sr.UnknownValueError:
-            print("command: void", flush=True)
+            print(" ", flush=True)
 
         if not active:
-            if command == "active" or command == "activation" or command == "excavation" or command == "activate":
-                say("Hi, Yunfei")
+            if command in active_list:
+                print("Hello, system is activated")
+                say("Hello, system is activated")
                 active = True
         else:
-            print("command accept")
+            print(command)
+            if command in stop_list:
+                active = False
+                print("End of section")
+            else:
+                if command in grasp_list:
+                    print("the glove will grasp!")
+                elif command in release_list:
+                    print("the glove will release!")
+                else:
+                    print("re-input command")
 
 
 

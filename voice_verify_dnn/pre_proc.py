@@ -53,7 +53,8 @@ def graph_spectrogram(wav_file):
     elif nchannels == 2:
         pxx, freqs, bins, im = plt.specgram(data[:,0], nfft, fs, noverlap = noverlap)
         #plt.show()
-    return pxx.T
+    stacked_img = np.stack((pxx.T,) * 3, axis=-1)
+    return stacked_img
 
 
 def build_train_data():
